@@ -77,14 +77,50 @@ export function BusinessDashboard({ state }) {
   const weekTotal = dailyHistory.reduce((s, d) => s + d.count, 0);
 
   const triggerAction = async (endpoint, options = {}) => {
-    try {
-      await fetch(`${getApiBase()}${endpoint}`, {
-        method: options.method || 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: options.body ? JSON.stringify(options.body) : null,
-      });
+  try {
+    const adminToken = sessionStorage.getItem('queueless_admin_token');
+
+    if (!adminToken) {
+      console.error('No admin token found.');
+      alert('Admin session expired. Please login again.');
+      return;
+    }
+
+    const response = await fetch(`${getApiBase()}${endpoint}`, {
+      method: options.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': adminToken,
+      },
+      body: options.body
+        ? JSON.stringify(options.body)
+        : undefined,
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      console.error('Dashboard action failed:', response.status, data);
+
+      if (response.status === 401) {
+        sessionStorage.removeItem('queueless_admin_token');
+        alert('Admin session expired. Please login again.');
+        window.location.href = '/admin';
+        return;
+      }
+
+      throw new Error(
+        data?.detail || `Request failed with status ${response.status}`
+      );
+    }
+
+    console.log('Dashboard action successful:', data);
+
+    return data;
+
     } catch (err) {
-      console.error('Dashboard action failed', err);
+    console.error('Dashboard action failed:', err);
+    alert(err.message || 'Something went wrong.');
     }
   };
 
@@ -100,7 +136,7 @@ export function BusinessDashboard({ state }) {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('queueless_admin_auth');
+    sessionStorage.removeItem('queueless_admin_token');
     window.location.href = '/';
   };
 

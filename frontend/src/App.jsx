@@ -17,8 +17,8 @@ export default function App() {
   const location = useLocation();
 
   const [isAdminAuthed, setIsAdminAuthed] = useState(
-    () => sessionStorage.getItem('queueless_admin_auth') === 'true'
-  );
+  () => Boolean(sessionStorage.getItem('queueless_admin_token'))
+);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
