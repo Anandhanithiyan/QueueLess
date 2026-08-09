@@ -1,5 +1,12 @@
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_App-teal?style=for-the-badge)](queue-less-git-main-nithiyan2306-2395s-projects.vercel.app)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/Anandhanithiyan/QueueLess)
+# QueueLess — Smart Queue Management System
+
+> Wait anywhere, not in line. A real-time digital queue management system.
+
+🌐 **Live Demo** → [queue-less-git-main-nithiyan2306-2395s-projects.vercel.app](https://queue-less-git-main-nithiyan2306-2395s-projects.vercel.app)
+
+💻 **GitHub** → [github.com/Anandhanithiyan/QueueLess](https://github.com/Anandhanithiyan/QueueLess)
+
+---
 
 ## What is QueueLess?
 
@@ -42,9 +49,8 @@ QueueLess eliminates physical waiting lines for service counters — clinics, ba
 **Requirements:** Node.js 18+, Python 3.10+
 
 ```bash
-# Clone
-git clone https://github.com/YOUR_USERNAME/queueless.git
-cd queueless
+git clone https://github.com/Anandhanithiyan/QueueLess.git
+cd QueueLess
 ```
 
 **Backend**
@@ -65,13 +71,13 @@ npm run dev
 ```
 VITE_BACKEND_URL=your-backend.onrender.com
 ```
-Leave it empty for local development (defaults to `localhost:8000`).
+Leave empty for local development (defaults to `localhost:8000`).
 
 ---
 
 ## Admin Access
 
-Go to `/admin` in the browser.
+Navigate to `/admin` in the browser.
 
 Default password: `queueless2026`
 
@@ -85,7 +91,7 @@ QUEUELESS_ADMIN_PASSWORD=your_password
 ## Project Structure
 
 ```
-queueless/
+QueueLess/
 ├── backend/
 │   ├── main.py              # FastAPI routes + WebSocket
 │   ├── queue_manager.py     # Queue logic and state
@@ -116,7 +122,7 @@ queueless/
 | GET | `/api/queue/{token_id}` | Live token status |
 | DELETE | `/api/queue/leave/{token_id}` | Leave the queue |
 
-**Admin** *(send `X-Admin-Token` header)*
+**Admin** *(requires `X-Admin-Token` header)*
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
