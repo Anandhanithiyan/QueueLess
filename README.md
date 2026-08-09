@@ -1,5 +1,5 @@
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_App-teal?style=for-the-badge)](https://YOUR_LIVE_URL_HERE)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://YOUR_GITHUB_URL_HERE)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_App-teal?style=for-the-badge)](queue-less-git-main-nithiyan2306-2395s-projects.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/Anandhanithiyan/QueueLess)
 
 ## What is QueueLess?
 
