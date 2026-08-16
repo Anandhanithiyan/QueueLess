@@ -1,29 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SmartReturnBlock } from './SmartReturnBlock';
 import { AudioAlert } from './AudioAlert';
-import { 
-  Users, Clock, LogOut, Sparkles, CheckCircle2, Timer, 
-  ChevronRight, ShieldCheck, QrCode, Smartphone, Bell
-} from 'lucide-react';
 
-// Dynamic API Base URL resolution for Local, Wi-Fi, and Production deployments
+// Dynamic API Base URL
 const getApiBase = () => {
   const envHost = import.meta.env.VITE_BACKEND_URL;
-  if (envHost) {
-    return `https://${envHost}/api`;
-  }
+  if (envHost) return `https://${envHost}/api`;
   return `http://${window.location.hostname}:8000/api`;
 };
-
 const API_BASE = getApiBase();
 
-// Live countdown clock component
+// ── Live Countdown ────────────────────────────────────────────────────────────
 function LiveCountdown({ etaMinutes, lastUpdated }) {
   const [secondsLeft, setSecondsLeft] = useState(etaMinutes * 60);
 
-  useEffect(() => {
-    setSecondsLeft(etaMinutes * 60);
-  }, [etaMinutes, lastUpdated]);
+  useEffect(() => { setSecondsLeft(etaMinutes * 60); }, [etaMinutes, lastUpdated]);
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -35,34 +26,53 @@ function LiveCountdown({ etaMinutes, lastUpdated }) {
   const secs = secondsLeft % 60;
 
   if (secondsLeft === 0) {
-    return <span className="text-teal-600 font-black text-xl animate-pulse">Any moment now</span>;
+    return (
+      <span className="text-[#006356] font-extrabold text-2xl animate-pulse tracking-tight">
+        Any moment…
+      </span>
+    );
   }
 
   return (
-    <div className="tabular-nums">
-      <span className="text-3xl font-black text-slate-900">{mins}</span>
-      <span className="text-lg font-bold text-slate-400 mx-0.5">:</span>
-      <span className="text-3xl font-black text-slate-900">{String(secs).padStart(2, '0')}</span>
-      <span className="text-xs font-semibold text-slate-400 ml-1">left</span>
+    <div className="tabular-nums flex items-baseline gap-1">
+      <span className="text-4xl font-extrabold text-[#1a1c1e] tracking-tight leading-none">
+        {String(mins).padStart(2, '0')}
+      </span>
+      <span className="text-2xl font-bold text-[#6e7a76]">:</span>
+      <span className="text-4xl font-extrabold text-[#1a1c1e] tracking-tight leading-none">
+        {String(secs).padStart(2, '0')}
+      </span>
     </div>
   );
 }
 
+// ── Ripple animation (Now Serving) ───────────────────────────────────────────
+const rippleStyle = `
+  @keyframes ql-ripple {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(2.6); opacity: 0; }
+  }
+  .ql-ripple { animation: ql-ripple 3s cubic-bezier(0.65,0,0.34,1) infinite; }
+  .ql-ripple-2 { animation: ql-ripple 3s cubic-bezier(0.65,0,0.34,1) 1s infinite; }
+  .ql-ripple-3 { animation: ql-ripple 3s cubic-bezier(0.65,0,0.34,1) 2s infinite; }
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=DM+Sans:wght@400;700&display=swap');
+`;
+
 export function CustomerView({ state }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [myToken, setMyToken] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [name, setName]         = useState('');
+  const [phone, setPhone]       = useState('');
+  const [myToken, setMyToken]   = useState(null);
+  const [loading, setLoading]   = useState(false);
   const [stateVersion, setStateVersion] = useState(0);
   const prevWaiting = useRef(null);
 
   useEffect(() => {
     if (!state) return;
-    const currentWaiting = state.total_waiting;
-    if (prevWaiting.current !== null && prevWaiting.current !== currentWaiting) {
+    const cur = state.total_waiting;
+    if (prevWaiting.current !== null && prevWaiting.current !== cur) {
       setStateVersion(v => v + 1);
     }
-    prevWaiting.current = currentWaiting;
+    prevWaiting.current = cur;
   }, [state]);
 
   const handleJoin = async (e) => {
@@ -73,14 +83,14 @@ export function CustomerView({ state }) {
       const res = await fetch(`${API_BASE}/queue/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone })
+        body: JSON.stringify({ name, phone }),
       });
       if (res.ok) {
         const data = await res.json();
         setMyToken(data.token);
       }
     } catch (err) {
-      console.error("Failed to join queue", err);
+      console.error('Failed to join queue', err);
     } finally {
       setLoading(false);
     }
@@ -92,181 +102,336 @@ export function CustomerView({ state }) {
       await fetch(`${API_BASE}/queue/leave/${myToken}`, { method: 'DELETE' });
       setMyToken(null);
     } catch (err) {
-      console.error("Failed to leave queue", err);
+      console.error('Failed to leave queue', err);
     }
   };
 
   const isServing = state?.currently_serving?.token === myToken;
-  const myData = state?.waiting_queue?.find(i => i.token === myToken);
-  const isNext = myData?.people_ahead === 1;
+  const myData    = state?.waiting_queue?.find(i => i.token === myToken);
+  const isNext    = myData?.people_ahead === 1;
 
-  // ── 1. JOIN FORM ──────────────────────────────────────────────────────────
+  // ── 1. JOIN FORM ────────────────────────────────────────────────────────────
   if (!myToken) {
     return (
-      <div className="py-4 md:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Column (Hero & Live Overview) */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="bg-gradient-to-br from-teal-700 via-teal-800 to-slate-900 text-white rounded-3xl p-8 md:p-10 shadow-2xl shadow-teal-900/20 relative overflow-hidden">
-              <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-              
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold text-teal-200 mb-6">
-                <Sparkles className="w-4 h-4 text-teal-300" /> Smart Live Queueing System
+      <>
+        <style>{rippleStyle}</style>
+
+        {/* ── MOBILE: single-column ── */}
+        <div className="lg:hidden min-h-screen bg-[#f9f9fc] pb-8 font-[DM_Sans,sans-serif]">
+          <div className="px-5 pt-8 pb-4 flex flex-col items-center text-center">
+            <h1
+              className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-[#1a1c1e] mb-3"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Skip the wait.<br />Not your turn.
+            </h1>
+            <p className="text-[16px] text-[#3e4946] leading-relaxed max-w-xs">
+              Get a live digital token and return when you're close.
+            </p>
+
+            {/* Live stat pills */}
+            <div className="flex flex-wrap gap-2 justify-center mt-5">
+              <div className="flex items-center gap-2 bg-[#006356]/10 border border-[#96f4e0] rounded-full px-4 py-1.5">
+                <span className={`w-2 h-2 rounded-full ${state?.is_open ? 'bg-[#10B981] animate-pulse' : 'bg-rose-400'}`} />
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#006356]">
+                  Queue: {state?.is_open ? 'Open' : 'Closed'}
+                </span>
               </div>
-
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
-                Wait anywhere, <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-emerald-300">not in line.</span>
-              </h1>
-              
-              <p className="text-teal-100/80 text-sm md:text-base mt-3 max-w-lg leading-relaxed">
-                Get a real-time digital token on your phone. Enjoy your time nearby and receive smart return notifications before your turn arrives.
-              </p>
-
-              {/* Live Status Indicators */}
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 pt-6 border-t border-white/10">
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                  <span className="text-xs text-teal-200 uppercase font-bold tracking-wider block mb-1">Queue Status</span>
-                  <span className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${state?.is_open ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-                    {state?.is_open ? 'Open' : 'Closed'}
-                  </span>
-                </div>
-
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                  <span className="text-xs text-teal-200 uppercase font-bold tracking-wider block mb-1">Waiting Now</span>
-                  <span className="text-xl md:text-2xl font-black text-white">{state?.total_waiting ?? 0} <span className="text-xs font-normal opacity-70">people</span></span>
-                </div>
-
-                <div className="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                  <span className="text-xs text-teal-200 uppercase font-bold tracking-wider block mb-1">Est. Wait Time</span>
-                  <span className="text-xl md:text-2xl font-black text-white">~{(state?.total_waiting ?? 0) * (state?.avg_service_time ?? 5)} <span className="text-xs font-normal opacity-70">mins</span></span>
-                </div>
+              <div className="flex items-center gap-2 bg-white border border-[#bdc9c5]/40 rounded-full px-4 py-1.5 shadow-sm">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#3e4946]">
+                  Waiting: {state?.total_waiting ?? 0}
+                </span>
               </div>
-            </div>
-
-            {/* Value Proposition Cards */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { title: 'Scan & Leave', desc: 'No physical line', icon: QrCode },
-                { title: 'Live Tracking', desc: 'Realtime updates', icon: Smartphone },
-                { title: 'Smart Return', desc: 'Buffer alerts', icon: Bell },
-              ].map((item, idx) => (
-                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
-                  <item.icon className="w-5 h-5 text-teal-600 mb-2" />
-                  <div>
-                    <h4 className="text-xs md:text-sm font-bold text-slate-800">{item.title}</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+              <div className="flex items-center gap-2 bg-white border border-[#bdc9c5]/40 rounded-full px-4 py-1.5 shadow-sm">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#3e4946]">
+                  ~{(state?.total_waiting ?? 0) * (state?.avg_service_time ?? 5)} min wait
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Right Column (Join Form Card) */}
-          <div className="lg:col-span-5">
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80 sticky top-24">
-              <div className="mb-6">
-                <h3 className="text-2xl font-black text-slate-900">Join the Queue</h3>
-                <p className="text-xs text-slate-500 mt-1">Get your instant token and live return estimate.</p>
-              </div>
+          {/* Join card */}
+          <div className="mx-5 mt-4 bg-white rounded-[20px] shadow-[0_8px_30px_rgba(10,126,110,0.08)] border border-[#e2e2e5] overflow-hidden">
+            <div className="h-1.5 w-full bg-[#006356]" />
+            <div className="p-6">
+              <h2
+                className="text-[22px] font-bold text-[#1a1c1e] mb-5"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Join the Queue
+              </h2>
 
               {!state?.is_open ? (
-                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-6 rounded-2xl text-center space-y-2">
-                  <p className="font-bold text-base">Queue is Currently Closed</p>
-                  <p className="text-xs text-rose-600">The counter is not accepting new tokens right now. Please check back later.</p>
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-xl text-center">
+                  <p className="font-bold text-base mb-1">Queue is Currently Closed</p>
+                  <p className="text-xs text-rose-600">The counter is not accepting new tokens right now.</p>
                 </div>
               ) : (
-                <form onSubmit={handleJoin} className="space-y-4">
+                <form onSubmit={handleJoin} className="flex flex-col gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Your Full Name</label>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3e4946] mb-1.5">
+                      Full Name
+                    </label>
                     <input
                       type="text"
                       required
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Anandh Krishnan"
-                      className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all text-sm font-medium"
+                      onChange={e => setName(e.target.value)}
+                      placeholder="John Doe"
+                      className="w-full bg-[#f3f3f6] border-0 rounded-xl px-4 py-3.5 text-[14px] text-[#1a1c1e] placeholder:text-[#6e7a76]/60 focus:outline-none focus:ring-2 focus:ring-[#006356]/30 transition-all"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                      Mobile Number <span className="normal-case font-normal text-slate-400">(Optional for SMS)</span>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3e4946] mb-1.5">
+                      Phone <span className="normal-case font-normal text-[#6e7a76]">(optional)</span>
                     </label>
                     <input
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={e => setPhone(e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all text-sm font-medium"
+                      className="w-full bg-[#f3f3f6] border-0 rounded-xl px-4 py-3.5 text-[14px] text-[#1a1c1e] placeholder:text-[#6e7a76]/60 focus:outline-none focus:ring-2 focus:ring-[#006356]/30 transition-all"
                     />
                   </div>
-
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-teal-600/25 active:scale-[0.98] disabled:opacity-50 text-base flex items-center justify-center gap-2 group"
+                    className="mt-2 w-full bg-[#006356] hover:bg-[#005045] disabled:bg-[#006356]/50 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-[14px] uppercase tracking-wider"
                   >
-                    {loading ? 'Generating Token...' : (
-                      <>
-                        Get Digital Token <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
+                    {loading ? 'Generating…' : 'Get My Token →'}
                   </button>
-
-                  <p className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1 mt-4">
-                    <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> No app download required. Instant browser sync.
+                  <p className="text-center text-[11px] text-[#6e7a76] mt-1">
+                    By joining, you agree to receive SMS updates.
                   </p>
                 </form>
               )}
             </div>
           </div>
 
+          {/* Value props */}
+          <div className="mx-5 mt-8 flex flex-col gap-6">
+            {[
+              { icon: '🔔', title: 'Live Updates', desc: 'Track your exact position in real-time from anywhere.' },
+              { icon: '🚶', title: 'Roam Freely', desc: 'Grab a coffee or browse nearby while you wait.' },
+              { icon: '🎫', title: 'Seamless Entry', desc: 'Show your digital boarding pass when called.' },
+            ].map((p, i) => (
+              <div key={i} className="flex items-start gap-4">
+                <div className="w-11 h-11 rounded-full bg-[#d7e6e3] flex items-center justify-center shrink-0 text-xl">
+                  {p.icon}
+                </div>
+                <div className="pt-0.5">
+                  <h3 className="text-[16px] font-bold text-[#1a1c1e] mb-0.5">{p.title}</h3>
+                  <p className="text-[13px] text-[#3e4946] leading-snug">{p.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+
+        {/* ── DESKTOP: two-column ── */}
+        <div className="hidden lg:flex min-h-[calc(100vh-5rem)] items-center justify-center bg-[#f9f9fc] font-[DM_Sans,sans-serif]">
+          <div className="w-full max-w-[1100px] mx-auto bg-white rounded-[24px] shadow-[0_12px_40px_rgba(10,126,110,0.08)] overflow-hidden flex">
+
+            {/* Left: hero */}
+            <div className="w-[55%] p-12 flex flex-col justify-between bg-white">
+              <div className="space-y-8">
+                <div className="space-y-5">
+                  <h1
+                    className="text-[52px] font-extrabold leading-[1.1] tracking-[-0.02em] text-[#1a1c1e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    Skip the wait.<br />Not your turn.
+                  </h1>
+                  <p className="text-[18px] text-[#3e4946] leading-relaxed max-w-md">
+                    Get a live digital token and return when you're close. Experience total control over your time.
+                  </p>
+                </div>
+
+                {/* Pills */}
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <div className="flex items-center gap-2 bg-[#006356]/10 border border-[#96f4e0] rounded-full px-4 py-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${state?.is_open ? 'bg-[#10B981] animate-pulse' : 'bg-rose-400'}`} />
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#006356]">
+                      Queue: {state?.is_open ? 'Open' : 'Closed'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#eeeef0] rounded-full px-4 py-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#3e4946]">
+                      Waiting: {state?.total_waiting ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#eeeef0] rounded-full px-4 py-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#3e4946]">
+                      ~{(state?.total_waiting ?? 0) * (state?.avg_service_time ?? 5)} min wait
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Value props */}
+              <div className="mt-12 flex flex-col gap-5">
+                {[
+                  { icon: '🔔', title: 'Live Updates', desc: 'Track your position in real-time on your device.' },
+                  { icon: '🚶', title: 'Roam Freely', desc: 'Grab a coffee or browse nearby while you wait.' },
+                  { icon: '🎫', title: 'Seamless Entry', desc: 'Show your digital boarding pass when called.' },
+                ].map((p, i) => (
+                  <React.Fragment key={i}>
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-[#f3f3f6] flex items-center justify-center text-lg shrink-0">
+                        {p.icon}
+                      </div>
+                      <div>
+                        <h3 className="text-[17px] font-semibold text-[#1a1c1e] mb-0.5">{p.title}</h3>
+                        <p className="text-[14px] text-[#3e4946]">{p.desc}</p>
+                      </div>
+                    </div>
+                    {i < 2 && <div className="h-px w-full bg-[#bdc9c5]/30" />}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: form */}
+            <div className="w-[45%] bg-[#f9f9fc] p-8 flex items-center">
+              <div className="w-full bg-white rounded-2xl shadow-[0_4px_20px_rgba(10,126,110,0.08)] border border-[#bdc9c5]/20 overflow-hidden">
+                <div className="h-1.5 w-full bg-[#006356]" />
+                <div className="p-8">
+                  <h2
+                    className="text-[26px] font-bold text-[#1a1c1e] mb-7"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    Join the Queue
+                  </h2>
+
+                  {!state?.is_open ? (
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 p-6 rounded-xl text-center">
+                      <p className="font-bold text-base mb-1">Queue is Currently Closed</p>
+                      <p className="text-xs text-rose-600">The counter is not accepting new tokens right now.</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleJoin} className="flex flex-col gap-5">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3e4946] mb-2">
+                          Full Name
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={name}
+                          onChange={e => setName(e.target.value)}
+                          placeholder="John Doe"
+                          className="w-full bg-[#f3f3f6] border-0 rounded-xl px-4 py-3.5 text-[14px] text-[#1a1c1e] placeholder:text-[#6e7a76]/60 focus:outline-none focus:ring-2 focus:ring-[#006356]/30 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#3e4946] mb-2">
+                          Phone Number <span className="normal-case font-normal text-[#6e7a76]">(For SMS Updates)</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={e => setPhone(e.target.value)}
+                          placeholder="+91 98765 43210"
+                          className="w-full bg-[#f3f3f6] border-0 rounded-xl px-4 py-3.5 text-[14px] text-[#1a1c1e] placeholder:text-[#6e7a76]/60 focus:outline-none focus:ring-2 focus:ring-[#006356]/30 transition-all"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="mt-3 w-full bg-[#006356] hover:bg-[#005045] disabled:bg-[#006356]/50 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all text-[13px] uppercase tracking-widest shadow-sm"
+                      >
+                        {loading ? 'Generating…' : 'GET MY TOKEN →'}
+                      </button>
+                      <p className="text-center text-[12px] text-[#6e7a76]">
+                        By joining, you agree to our{' '}
+                        <span className="underline cursor-pointer hover:text-[#006356]">Terms of Service</span>.
+                      </p>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </>
     );
   }
 
-  // ── 2. BEING SERVED VIEW ──────────────────────────────────────────────────
+  // ── 2. BEING SERVED ─────────────────────────────────────────────────────────
   if (isServing) {
     return (
-      <div className="max-w-2xl mx-auto py-8 md:py-12">
+      <>
+        <style>{rippleStyle}</style>
         <AudioAlert trigger={true} />
-        <div className="bg-gradient-to-br from-teal-600 to-teal-800 text-white rounded-3xl p-8 md:p-12 shadow-2xl shadow-teal-600/30 text-center space-y-6 relative overflow-hidden">
-          <div className="inline-flex items-center gap-2 px-5 py-2 bg-white/20 backdrop-blur-md rounded-full text-xs font-black uppercase tracking-widest animate-bounce">
-            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-            It's Your Turn!
-          </div>
+        <div
+          className="fixed inset-0 flex flex-col items-center justify-center text-white font-[DM_Sans,sans-serif]"
+          style={{ background: 'linear-gradient(160deg, #006356 0%, #0a7e6e 100%)' }}
+        >
+          {/* Ambient blobs */}
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[100px] opacity-20"
+               style={{ background: '#96f4e0' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-20"
+               style={{ background: '#00201b' }} />
 
-          <div>
-            <span className="text-xs font-bold uppercase opacity-75 tracking-widest block mb-2">Token Number</span>
-            <h1 className="text-7xl md:text-9xl font-black tracking-tight">{myToken}</h1>
-          </div>
+          <div className="z-10 flex flex-col items-center text-center gap-10 px-6">
+            {/* Badge */}
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20">
+              <span className="w-2 h-2 rounded-full bg-[#96f4e0] animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-widest text-[#96f4e0]">Now Serving</span>
+            </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 max-w-md mx-auto">
-            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-teal-200" />
-            <p className="text-lg font-bold text-white">Please proceed to the service counter now.</p>
-            <p className="text-xs text-teal-100 mt-1">Show this token on your screen to staff.</p>
+            {/* Ripple token */}
+            <div className="relative flex items-center justify-center w-64 h-64 md:w-[360px] md:h-[360px]">
+              <div className="ql-ripple   absolute inset-0 rounded-full bg-[#96f4e0]/20" />
+              <div className="ql-ripple-2 absolute inset-0 rounded-full bg-[#96f4e0]/20" />
+              <div className="ql-ripple-3 absolute inset-0 rounded-full bg-[#96f4e0]/20" />
+              <div className="relative z-10 w-full h-full bg-white rounded-full flex flex-col items-center justify-center border-4 border-[#96f4e0] shadow-2xl">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#6e7a76] mb-1">Queue ID</span>
+                <span
+                  className="text-[56px] md:text-[80px] font-extrabold tracking-tight leading-none text-[#006356]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {myToken}
+                </span>
+              </div>
+            </div>
+
+            {/* Message */}
+            <div className="space-y-3">
+              <h1
+                className="text-[28px] md:text-[36px] font-bold text-white"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                It's Your Turn
+              </h1>
+              <p className="text-[16px] text-[#79d7c4] max-w-sm">
+                Please proceed to the counter immediately.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  // ── 3. TOKEN EXPIRED / CANCELLED ──────────────────────────────────────────
+  // ── 3. TOKEN EXPIRED / CANCELLED ────────────────────────────────────────────
   if (!myData) {
     return (
-      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-3xl shadow-xl text-center border border-slate-200/80">
-        <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center mx-auto mb-4 font-black">
+      <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-[20px] shadow-[0_8px_30px_rgba(10,126,110,0.08)] text-center border border-[#e2e2e5]">
+        <div className="w-12 h-12 bg-[#d7e6e3] text-[#006356] rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl font-bold">
           ✓
         </div>
-        <h3 className="text-xl font-black text-slate-800">Token Completed</h3>
-        <p className="text-sm text-slate-500 mt-1">Your token is no longer active in the queue.</p>
-        <button 
-          onClick={() => setMyToken(null)} 
-          className="mt-6 w-full py-3.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition-all shadow-md shadow-teal-600/20"
+        <h3
+          className="text-[20px] font-bold text-[#1a1c1e]"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Token Completed
+        </h3>
+        <p className="text-[14px] text-[#3e4946] mt-1">Your token is no longer active in the queue.</p>
+        <button
+          onClick={() => setMyToken(null)}
+          className="mt-6 w-full py-3.5 bg-[#006356] hover:bg-[#005045] text-white rounded-xl text-[13px] font-bold uppercase tracking-wider transition-all"
         >
           Join Queue Again
         </button>
@@ -274,115 +439,283 @@ export function CustomerView({ state }) {
     );
   }
 
-  // ── 4. WAITING TICKET ─────────────────────────────────────────────────────
+  // ── 4. WAITING TICKET ───────────────────────────────────────────────────────
   return (
-    <div className="py-4 md:py-8 max-w-6xl mx-auto space-y-6">
+    <>
+      <style>{rippleStyle}</style>
       <AudioAlert trigger={isNext} />
 
-      {/* Turn Proximity Banner */}
+      {/* "You're next" banner */}
       {isNext && (
-        <div className="bg-amber-500 text-white px-6 py-4 rounded-2xl font-bold text-sm text-center shadow-xl shadow-amber-500/20 animate-pulse flex items-center justify-center gap-2">
+        <div className="mb-5 bg-[#F59E0B] text-white px-6 py-4 rounded-2xl font-bold text-sm text-center shadow-xl animate-pulse flex items-center justify-center gap-2">
           ⚡ You are 2nd in line! Please head back toward the service counter.
         </div>
       )}
 
-      {/* Main Grid Layout for Laptop */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Card: Main Digital Ticket */}
-        <div className="lg:col-span-7 bg-white rounded-3xl shadow-xl border border-slate-200/80 overflow-hidden">
-          
-          {/* Header Bar */}
-          <div className="flex justify-between items-center px-6 md:px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Queue Ticket</span>
-              <h3 className="text-xl font-black text-slate-900">{myData.name}</h3>
-            </div>
-            <button
-              onClick={handleLeave}
-              className="px-3 py-2 text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all flex items-center gap-1.5"
-              title="Leave queue"
+      {/* ── MOBILE ── */}
+      <div className="lg:hidden font-[DM_Sans,sans-serif] pb-24">
+
+        {/* Boarding pass card (vertical, mobile) */}
+        <div className="mx-auto max-w-sm rounded-[20px] bg-white shadow-[0_4px_20px_rgba(10,126,110,0.08)] overflow-hidden">
+          {/* Mint top */}
+          <div className="bg-[#e8f7f4] p-6 flex flex-col items-center text-center">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-[#006356] mb-2">
+              YOUR TOKEN
+            </span>
+            <div
+              className="text-[52px] font-extrabold text-[#0a7e6e] tracking-tight leading-none mb-1"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              <LogOut className="w-4 h-4" /> Cancel Token
-            </button>
+              {myData.token}
+            </div>
+            <span className="text-[14px] text-[#3e4946] mt-1">{myData.name}</span>
           </div>
 
-          {/* Big Token Display */}
-          <div className="px-6 py-8 text-center bg-gradient-to-b from-teal-50/40 via-white to-white">
-            <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] block mb-2">Your Token Number</span>
-            <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tight">{myData.token}</h1>
+          {/* Perforation */}
+          <div className="relative h-6 bg-white w-full flex items-center">
+            <div className="absolute -left-3 w-6 h-6 bg-[#f9f9fc] rounded-full" />
+            <div className="absolute -right-3 w-6 h-6 bg-[#f9f9fc] rounded-full" />
+            <div className="w-full h-px border-t border-dashed border-[#bdc9c5]/60 mx-3" />
           </div>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-3 gap-px bg-slate-200/70 border-t border-b border-slate-200/70">
-            <div className="bg-white p-4 md:p-6 text-center">
-              <Users className="w-4 h-4 text-slate-400 mx-auto mb-1" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">People Ahead</span>
-              <span className="text-2xl md:text-3xl font-black text-slate-900">{myData.people_ahead}</span>
-            </div>
-            <div className="bg-white p-4 md:p-6 text-center border-l border-r border-slate-200/70">
-              <Timer className="w-4 h-4 text-slate-400 mx-auto mb-1" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">Countdown</span>
-              <LiveCountdown etaMinutes={myData.eta_minutes} lastUpdated={stateVersion} />
-            </div>
-            <div className="bg-white p-4 md:p-6 text-center">
-              <Clock className="w-4 h-4 text-slate-400 mx-auto mb-1" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">Estimated Turn</span>
-              <span className="text-lg md:text-xl font-black text-slate-900">{myData.estimated_turn_time}</span>
-            </div>
-          </div>
-
-          {/* Queue Progress Bar */}
-          <div className="p-6 md:p-8 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-              <span>Overall Progress</span>
-              <span className="text-teal-600">Position #{myData.position}</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200/60">
-              <div
-                className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-700"
-                style={{
-                  width: `${Math.max(8, 100 - ((myData.people_ahead / Math.max(myData.position, 1)) * 100))}%`
-                }}
-              />
-            </div>
-            <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-              <span>Joined</span>
-              <span>Your Turn</span>
+          {/* Stats grid */}
+          <div className="p-6 bg-white">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col border-r border-[#bdc9c5]/30 pr-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-1">Ahead</span>
+                <span
+                  className="text-[26px] font-bold text-[#006356]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {myData.people_ahead}
+                </span>
+              </div>
+              <div className="flex flex-col border-r border-[#bdc9c5]/30 px-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-1">Est. Turn</span>
+                <span
+                  className="text-[18px] font-bold text-[#006356]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {myData.estimated_turn_time}
+                </span>
+              </div>
+              <div className="flex flex-col pl-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-1">Return By</span>
+                <span
+                  className="text-[18px] font-bold text-[#006356]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {myData.return_by_time}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Card: Smart Return Recommendation & Serving Overview */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80">
-            <SmartReturnBlock
-              canLeave={myData.can_leave}
-              estimatedTurn={myData.estimated_turn_time}
-              returnBy={myData.return_by_time}
-            />
+        {/* Live status section */}
+        <div className="mt-6 mx-auto max-w-sm flex flex-col gap-5">
+          {/* Countdown + progress */}
+          <div className="bg-white rounded-[16px] p-5 shadow-[0_2px_12px_rgba(10,126,110,0.06)]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[#6e7a76]">Estimated Wait</span>
+              <LiveCountdown etaMinutes={myData.eta_minutes} lastUpdated={stateVersion} />
+            </div>
+            <div className="h-2 w-full bg-[#e2e2e5] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${Math.max(6, 100 - ((myData.people_ahead / Math.max(myData.position, 1)) * 100))}%`,
+                  background: 'linear-gradient(90deg, #96f4e0, #0a7e6e)',
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-[11px] text-[#6e7a76] mt-1.5 font-medium">
+              <span>Position #{myData.position}</span>
+              <span>Your Turn</span>
+            </div>
           </div>
 
+          {/* Smart Return */}
+          <SmartReturnBlock
+            canLeave={myData.can_leave}
+            estimatedTurn={myData.estimated_turn_time}
+            returnBy={myData.return_by_time}
+          />
+
+          {/* Now serving chip */}
           {state?.currently_serving && (
-            <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 flex items-center justify-between">
+            <div className="bg-white rounded-[16px] p-4 shadow-[0_2px_12px_rgba(10,126,110,0.06)] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0a7e6e] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#006356]" />
                 </span>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Now Serving at Counter</span>
-                  <p className="text-sm font-bold text-slate-800">{state.currently_serving.name}</p>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] block">Now Serving</span>
+                  <span className="text-[14px] font-bold text-[#1a1c1e]">{state.currently_serving.name}</span>
                 </div>
               </div>
-              <span className="text-2xl font-black text-teal-600 bg-teal-50 px-4 py-1.5 rounded-2xl border border-teal-100">
+              <span
+                className="text-[20px] font-extrabold text-[#006356] bg-[#e8f7f4] px-3 py-1 rounded-xl border border-[#96f4e0]/40"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
                 {state.currently_serving.token}
               </span>
             </div>
           )}
-        </div>
 
+          {/* Cancel */}
+          <button
+            onClick={handleLeave}
+            className="w-full py-3.5 rounded-xl border border-[#bdc9c5] text-[#3e4946] text-[13px] font-bold uppercase tracking-wider hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-all flex items-center justify-center gap-2"
+          >
+            Cancel Token
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* ── DESKTOP: boarding pass horizontal ── */}
+      <div className="hidden lg:block font-[DM_Sans,sans-serif] py-8">
+        <div className="max-w-[760px] mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h2
+              className="text-[30px] font-bold text-[#1a1c1e]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              You're in the queue
+            </h2>
+            <p className="text-[15px] text-[#3e4946] mt-1">
+              Relax nearby. We'll notify you when it's your turn.
+            </p>
+          </div>
+
+          {/* Boarding pass card */}
+          <div className="flex bg-white rounded-[20px] shadow-[0_4px_20px_rgba(10,126,110,0.08)] overflow-visible relative">
+            {/* Left: mint */}
+            <div className="w-[42%] bg-[#e8f7f4] p-8 rounded-l-[20px] flex flex-col justify-between min-h-[260px]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#006356] block mb-5">
+                  YOUR TOKEN
+                </span>
+                <div
+                  className="text-[80px] font-extrabold text-[#0a7e6e] leading-none tracking-[-0.02em]"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {myData.token}
+                </div>
+              </div>
+              <div className="pt-5 border-t border-[#006356]/15 mt-5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#3e4946] block mb-1">
+                  Passenger
+                </span>
+                <span className="text-[16px] font-semibold text-[#1a1c1e]">{myData.name}</span>
+              </div>
+            </div>
+
+            {/* Perforated divider */}
+            <div className="relative flex flex-col items-center w-6 bg-white z-10">
+              <div className="absolute -top-3 w-6 h-6 bg-[#f9f9fc] rounded-full border border-[#e2e2e5]" />
+              <div className="w-px h-full border-l-2 border-dashed border-[#bdc9c5]/60 mx-auto" />
+              <div className="absolute -bottom-3 w-6 h-6 bg-[#f9f9fc] rounded-full border border-[#e2e2e5]" />
+            </div>
+
+            {/* Right: stats */}
+            <div className="flex-1 p-8 rounded-r-[20px] flex flex-col justify-center">
+              <div className="grid grid-cols-3 gap-5 mb-6">
+                <div className="flex flex-col border-r border-[#e2e2e5] pr-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-2">People Ahead</span>
+                  <span
+                    className="text-[32px] font-bold text-[#0a7e6e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {myData.people_ahead}
+                  </span>
+                </div>
+                <div className="flex flex-col border-r border-[#e2e2e5] px-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-2">Est. Turn</span>
+                  <span
+                    className="text-[22px] font-bold text-[#0a7e6e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {myData.estimated_turn_time}
+                  </span>
+                </div>
+                <div className="flex flex-col pl-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] mb-2">Return By</span>
+                  <span
+                    className="text-[22px] font-bold text-[#0a7e6e]"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {myData.return_by_time}
+                  </span>
+                </div>
+              </div>
+
+              {/* Cancel */}
+              <button
+                onClick={handleLeave}
+                className="self-end text-[11px] font-bold uppercase tracking-wider text-[#6e7a76] hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
+              >
+                Cancel Token
+              </button>
+            </div>
+          </div>
+
+          {/* Below-card stats */}
+          <div className="mt-6 flex flex-col gap-4">
+            {/* Countdown row */}
+            <div className="bg-white rounded-[16px] p-5 shadow-[0_2px_12px_rgba(10,126,110,0.06)]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#6e7a76]">Live Countdown</span>
+                <LiveCountdown etaMinutes={myData.eta_minutes} lastUpdated={stateVersion} />
+              </div>
+              <div className="h-2 w-full bg-[#e2e2e5] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${Math.max(6, 100 - ((myData.people_ahead / Math.max(myData.position, 1)) * 100))}%`,
+                    background: 'linear-gradient(90deg, #96f4e0, #0a7e6e)',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Smart return + now serving side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <SmartReturnBlock
+                canLeave={myData.can_leave}
+                estimatedTurn={myData.estimated_turn_time}
+                returnBy={myData.return_by_time}
+              />
+              {state?.currently_serving ? (
+                <div className="bg-white rounded-[16px] p-5 shadow-[0_2px_12px_rgba(10,126,110,0.06)] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0a7e6e] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#006356]" />
+                    </span>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#6e7a76] block">Now Serving</span>
+                      <span className="text-[15px] font-bold text-[#1a1c1e]">{state.currently_serving.name}</span>
+                    </div>
+                  </div>
+                  <span
+                    className="text-[22px] font-extrabold text-[#006356] bg-[#e8f7f4] px-3 py-1 rounded-xl"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {state.currently_serving.token}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-white rounded-[16px] p-5 shadow-[0_2px_12px_rgba(10,126,110,0.06)] flex items-center justify-center">
+                  <span className="text-[13px] text-[#6e7a76]">Counter is clear</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

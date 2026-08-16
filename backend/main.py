@@ -1,15 +1,21 @@
+import logging
 import os
 import secrets
 
 from fastapi import (
     FastAPI,
     HTTPException,
+    Request,
     WebSocket,
     WebSocketDisconnect,
     Header,
 )
 
 from fastapi.middleware.cors import CORSMiddleware
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from queue_manager import queue_manager
 
@@ -19,29 +25,65 @@ from schemas import (
     AdminLoginRequest,
 )
 
+logger = logging.getLogger("queueless")
+
+# ============================================================
+# STARTUP CHECKS
+# ============================================================
+
+ADMIN_PASSWORD = os.getenv("QUEUELESS_ADMIN_PASSWORD")
+
+if not ADMIN_PASSWORD:
+    logger.warning(
+        "QUEUELESS_ADMIN_PASSWORD is not set. "
+        "Falling back to default password — "
+        "do NOT use this in production."
+    )
+    ADMIN_PASSWORD = "queueless2026"
+
+# ============================================================
+# APP + RATE LIMITER
+# ============================================================
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="QueueLess Engine")
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ============================================================
+# CORS
+# ============================================================
+# allow_origins=["*"] + allow_credentials=True is invalid per the
+# CORS spec — browsers will block credentialed cross-origin requests
+# when the origin is a wildcard. Pin to the actual frontend origin(s).
+#
+# Set ALLOWED_ORIGINS in your environment as a comma-separated list:
+#   ALLOWED_ORIGINS=https://your-app.vercel.app,http://localhost:3000
+#
+# Falls back to localhost only if the env var is absent (dev mode).
+
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+)
+
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 # ============================================================
 # ADMIN AUTHENTICATION
 # ============================================================
 
-ADMIN_PASSWORD = os.getenv(
-    "QUEUELESS_ADMIN_PASSWORD",
-    "queueless2026"
-)
-
-admin_sessions = set()
+admin_sessions: set = set()
 
 
 def verify_admin(token: str):
@@ -55,11 +97,26 @@ def verify_admin(token: str):
 
 
 # ============================================================
+# HEALTH CHECK
+# ============================================================
+
+@app.get("/health")
+def health():
+    """Render.com health check endpoint."""
+    return {"status": "ok"}
+
+
+# ============================================================
 # CUSTOMER APIs
 # ============================================================
 
 @app.post("/api/queue/join")
-async def join_queue(payload: JoinQueueRequest):
+@limiter.limit("10/minute")
+async def join_queue(request: Request, payload: JoinQueueRequest):
+    """
+    Rate limited to 10 joins per IP per minute to prevent
+    queue flooding with fake tokens.
+    """
 
     try:
 
@@ -83,9 +140,7 @@ async def join_queue(payload: JoinQueueRequest):
 @app.get("/api/queue/{token_id}")
 async def get_customer_queue(token_id: str):
 
-    customer = queue_manager.get_customer_state(
-        token_id
-    )
+    customer = queue_manager.get_customer_state(token_id)
 
     if not customer:
 
@@ -100,9 +155,7 @@ async def get_customer_queue(token_id: str):
 @app.delete("/api/queue/leave/{token_id}")
 async def leave_queue(token_id: str):
 
-    success = queue_manager.cancel_token(
-        token_id
-    )
+    success = queue_manager.cancel_token(token_id)
 
     if not success:
 
@@ -124,7 +177,12 @@ async def leave_queue(token_id: str):
 # ============================================================
 
 @app.post("/api/admin/login")
-async def admin_login(payload: AdminLoginRequest):
+@limiter.limit("5/minute")
+async def admin_login(request: Request, payload: AdminLoginRequest):
+    """
+    Rate limited to 5 attempts per IP per minute to prevent
+    brute-force on the admin password.
+    """
 
     if payload.password != ADMIN_PASSWORD:
 
@@ -182,9 +240,7 @@ async def skip_token(
 
     verify_admin(x_admin_token)
 
-    success = queue_manager.skip_token(
-        token_id
-    )
+    success = queue_manager.skip_token(token_id)
 
     if not success:
 
@@ -209,9 +265,7 @@ async def remove_token(
 
     verify_admin(x_admin_token)
 
-    success = queue_manager.remove_token(
-        token_id
-    )
+    success = queue_manager.remove_token(token_id)
 
     if not success:
 
@@ -238,23 +292,18 @@ async def update_config(
 
     if payload.avg_service_time is not None:
 
-        queue_manager.avg_service_time = (
-            payload.avg_service_time
-        )
+        queue_manager.avg_service_time = payload.avg_service_time
 
     if payload.is_open is not None:
 
-        queue_manager.is_open = (
-            payload.is_open
-        )
+        queue_manager.is_open = payload.is_open
 
     await queue_manager.broadcast_state()
 
     return {
         "status": "success",
         "is_open": queue_manager.is_open,
-        "avg_service_time":
-            queue_manager.avg_service_time
+        "avg_service_time": queue_manager.avg_service_time
     }
 
 
@@ -273,9 +322,7 @@ async def get_stats(
 # ============================================================
 
 @app.websocket("/ws/queue")
-async def queue_websocket(
-    websocket: WebSocket
-):
+async def queue_websocket(websocket: WebSocket):
 
     await queue_manager.connect(websocket)
 

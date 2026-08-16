@@ -1,47 +1,63 @@
 import React from 'react';
-import { Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export function SmartReturnBlock({ canLeave, estimatedTurn, returnBy }) {
   if (!canLeave) {
     return (
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+      <div
+        className="rounded-xl p-4 flex items-start gap-3 border"
+        style={{
+          background: 'rgba(255,221,184,0.18)',
+          borderColor: 'rgba(157,99,0,0.25)',
+        }}
+      >
+        <span className="text-[#9d6300] mt-0.5 text-lg shrink-0">⚠️</span>
         <div>
-          <h4 className="font-semibold text-sm">Stay near the waiting area</h4>
-          <p className="text-xs text-amber-700 mt-0.5">Your turn is approaching fast. Please stay nearby to avoid missing your call.</p>
+          <h4 className="font-bold text-[14px] text-[#653e00] mb-0.5">Stay Close</h4>
+          <p className="text-[13px] text-[#3e4946] leading-snug">
+            Your turn is approaching. Please remain in the waiting area to avoid missing your call.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-emerald-950 shadow-sm">
+    <div
+      className="rounded-xl p-5 border"
+      style={{ background: '#e8f7f4', borderColor: 'rgba(150,244,224,0.5)' }}
+    >
+      {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="flex h-3 w-3 relative">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#10B981]" />
         </span>
-        <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Smart Return Active</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-[#006356]">
+          Smart Return Active
+        </span>
       </div>
 
-      <h3 className="text-base font-bold text-emerald-900 flex items-center gap-2">
-        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-        You can safely leave the waiting area
+      <h3 className="text-[14px] font-bold text-[#006356] mb-3 flex items-center gap-2">
+        ✅ You can safely leave the waiting area
       </h3>
 
-      <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-emerald-200/60">
+      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#006356]/15">
         <div>
-          <span className="text-xs text-emerald-700 block">Estimated Turn</span>
-          <span className="text-lg font-bold text-emerald-900">{estimatedTurn}</span>
-        </div>
-        <div className="bg-emerald-100/70 p-2 rounded-lg border border-emerald-200">
-          <span className="text-xs text-emerald-800 font-medium block flex items-center gap-1">
-            <Clock className="w-3 h-3 text-emerald-700" /> Return By
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[#3e4946] block mb-1">
+            Est. Turn
           </span>
-          <span className="text-lg font-extrabold text-emerald-950">{returnBy}</span>
+          <span className="text-[17px] font-bold text-[#0a7e6e]">{estimatedTurn}</span>
+        </div>
+        <div className="bg-[#d7e6e3] rounded-lg p-2 border border-[#96f4e0]/40">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[#006356] block mb-1">
+            🕐 Return By
+          </span>
+          <span className="text-[17px] font-extrabold text-[#006356]">{returnBy}</span>
         </div>
       </div>
-      <p className="text-[11px] text-emerald-700 mt-2 text-center">Includes 4-minute buffer time to reach counter</p>
+      <p className="text-[11px] text-[#3e4946] mt-2 text-center">
+        Includes 4-minute buffer to reach counter
+      </p>
     </div>
   );
 }

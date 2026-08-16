@@ -4,9 +4,9 @@ import { Lock, ArrowRight, Loader2 } from 'lucide-react';
 const getApiBase = () => {
   const envHost = import.meta.env.VITE_BACKEND_URL;
   if (envHost) {
-    return `https://${envHost}`;
+    return `https://${envHost}/api`;
   }
-  return `http://${window.location.hostname}:8000`;
+  return `http://${window.location.hostname}:8000/api`;
 };
 
 const API_BASE = getApiBase();
@@ -36,7 +36,7 @@ export function AdminProtectedRoute({ children, onAuth }) {
     try {
 
       const response = await fetch(
-        `${API_BASE}/api/admin/login`,
+        `${API_BASE}/admin/login`,
         {
           method: 'POST',
           headers: {
@@ -48,14 +48,13 @@ export function AdminProtectedRoute({ children, onAuth }) {
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
         throw new Error(
-          data.detail || `Login failed (${response.status}).`
+          data.detail || 'Invalid password.'
         );
       }
-
-      const data = await response.json();
 
       sessionStorage.setItem(
         'queueless_admin_token',

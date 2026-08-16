@@ -4,64 +4,98 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { CustomerView } from './components/CustomerView';
 import { BusinessDashboard } from './components/BusinessDashboard';
 import { AdminProtectedRoute } from './components/AdminProtectedRoute';
-import { LayoutGrid, User } from 'lucide-react';
 
 export default function App() {
-  // Dynamically resolve backend host for Local / Wi-Fi / Production deployments
-  const envHost = import.meta.env.VITE_BACKEND_URL;
-  const host = envHost || `${window.location.hostname}:8000`;
+  const envHost    = import.meta.env.VITE_BACKEND_URL;
+  const host       = envHost || `${window.location.hostname}:8000`;
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${wsProtocol}//${host}/ws/queue`;
+  const wsUrl      = `${wsProtocol}//${host}/ws/queue`;
 
   const { data: state, isConnected } = useWebSocket(wsUrl);
   const location = useLocation();
 
   const [isAdminAuthed, setIsAdminAuthed] = useState(
-  () => Boolean(sessionStorage.getItem('queueless_admin_token'))
-);
+    () => Boolean(sessionStorage.getItem('queueless_admin_token'))
+  );
+
+  // Customer view is full-screen on "being served" — skip the shell header
+  const isOnAdmin = location.pathname === '/admin';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-black text-2xl tracking-tight text-teal-600">
-              Queue<span className="text-slate-900">Less</span>
+    <div className="min-h-screen bg-[#f9f9fc]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-[#e2e2e5] sticky top-0 z-50">
+        <div className="max-w-[1280px] mx-auto px-6 h-16 flex items-center justify-between">
+
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="text-lg">🎫</span>
+            <span
+              className="font-bold text-[20px] text-[#006356]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              QueueLess
             </span>
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-              isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+
+            {/* Live badge */}
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+              isConnected
+                ? 'bg-[#10B981]/10 text-[#10B981]'
+                : 'bg-[#F59E0B]/10 text-[#F59E0B]'
             }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#10B981] animate-pulse' : 'bg-[#F59E0B]'}`} />
               {isConnected ? 'Live' : 'Connecting'}
             </span>
           </Link>
 
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+          {/* Now serving chip (desktop) */}
+          {state?.currently_serving && (
+            <div className="hidden md:flex items-center gap-2 bg-[#d7e6e3] px-3 py-1.5 rounded-full">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006356] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006356]" />
+              </span>
+              <span className="text-[11px] font-bold text-[#006356] uppercase tracking-wide">Now Serving</span>
+              <span
+                className="text-[13px] font-extrabold text-[#006356]"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                {state.currently_serving.token}
+              </span>
+            </div>
+          )}
+
+          {/* Nav toggle */}
+          <div className="flex items-center bg-[#f3f3f6] p-1 rounded-xl text-[12px] font-bold">
             <Link
               to="/"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                location.pathname === '/' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                location.pathname === '/'
+                  ? 'bg-white text-[#006356] shadow-sm'
+                  : 'text-[#6e7a76] hover:text-[#1a1c1e]'
               }`}
             >
-              <User className="w-3.5 h-3.5" /> Customer
+              👤 Customer
             </Link>
             {isAdminAuthed && (
               <Link
                 to="/admin"
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                  location.pathname === '/admin' ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  location.pathname === '/admin'
+                    ? 'bg-white text-[#006356] shadow-sm'
+                    : 'text-[#6e7a76] hover:text-[#1a1c1e]'
                 }`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" /> Dashboard
+                🖥️ Dashboard
               </Link>
             )}
           </div>
         </div>
       </header>
 
-      {/* Route Views */}
-      <main className="max-w-7xl mx-auto px-4 pt-6">
+      {/* ── ROUTES ─────────────────────────────────────────────────────── */}
+      <main className={isOnAdmin ? '' : 'max-w-[1280px] mx-auto px-4 md:px-6'}>
         <Routes>
           <Route path="/" element={<CustomerView state={state} />} />
           <Route
